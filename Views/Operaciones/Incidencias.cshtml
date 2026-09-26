@@ -1,11 +1,13 @@
 @model IncidenciasViewModel
+@using Microsoft.Extensions.Options
+@inject IOptions<BicisApp.Services.PieHostOptions> PieHost
 @{
     ViewData["Title"] = "Incidencias";
     var esSupervisor = User.IsInRole("Supervisor");
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-<h1>Incidencias abiertas</h1>
+<h1>Incidencias abiertas en tiempo real</h1>
 </div>
 
 @if (TempData["Exito"] is string exito) { <div class="alert alert-success">@exito</div> }
@@ -51,4 +53,18 @@ else
         }
         </tbody>
     </table>
+}
+
+@* C: canal WebSocket de PieHost (solo API Key pública; el secret queda en el servidor) *@
+<div id="piehost-config" hidden
+     data-dominio="@PieHost.Value.Dominio"
+     data-apikey="@PieHost.Value.ApiKey"
+     data-canal="@PieHost.Value.Channel"></div>
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080; max-width: 380px">
+    <div id="avisos-tiempo-real"></div>
+    <div class="text-end"><span id="ws-estado" class="badge bg-secondary">PieHost: iniciando…</span></div>
+</div>
+
+@section Scripts {
+    <script src="~/js/incidencias-tiempo-real.js" asp-append-version="true"></script>
 }

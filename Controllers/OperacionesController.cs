@@ -1,5 +1,6 @@
 using BicisApp.Data;
 using BicisApp.Models;
+using BicisApp.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +9,10 @@ namespace BicisApp.Controllers;
 
 [Authorize]
 [Route("Operaciones")]
-public class OperacionesController(ApplicationDbContext db, ILogger<OperacionesController> logger) : Controller
+public class OperacionesController(
+    ApplicationDbContext db,
+    PublicadorPieHost piehost,
+    ILogger<OperacionesController> logger) : Controller
 {
     // GET /Operaciones/Incidencias
     [HttpGet("Incidencias")]
@@ -37,8 +41,22 @@ public class OperacionesController(ApplicationDbContext db, ILogger<OperacionesC
         await db.SaveChangesAsync();
         logger.LogInformation("Incidencia {Id} cerrada en la base de datos", id);
 
+        // C: después de persistir, publicar el evento desde el servidor
+        await piehost.PublicarIncidenciaActualizadaAsync(id, incidencia.Estado.ToString());
+
         TempData["Exito"] = $"Incidencia #{id} cerrada.";
         return RedirectToAction(nameof(Incidencias));
+    }
+
+    // GET /Operaciones/Incidencias/Abiertas -> estado vigente (ids abiertos) para resincronizar al reconectar
+    [HttpGet("Incidencias/Abiertas")]
+    public async Task<IActionResult> Abiertas()
+    {
+        var ids = await db.Incidencias.AsNoTracking()
+            .Where(i => i.Estado == EstadoIncidencia.Abierta)
+            .Select(i => i.Id)
+            .ToListAsync();
+        return Json(ids);
     }
 
     private Task<List<IncidenciaDto>> ConsultarAbiertasAsync() =>

@@ -45,6 +45,8 @@ builder.Services.Configure<AlgoliaOptions>(builder.Configuration.GetSection("Alg
 builder.Services.AddHttpClient<IndexadorAlgolia>();
 
 // ---------- Servicios de las preguntas (A, B, C) ----------
+builder.Services.Configure<PieHostOptions>(builder.Configuration.GetSection("PieHost"));
+builder.Services.AddHttpClient<PublicadorPieHost>();  // C: WebSocket PieHost
 
 builder.Services.AddControllersWithViews();
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
