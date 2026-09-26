@@ -13,6 +13,7 @@ public class OperacionesController(
     ApplicationDbContext db,
     BusquedaAlgolia algolia,
     CacheIncidencias cache,
+    PublicadorPieHost piehost,
     ILogger<OperacionesController> logger) : Controller
 {
     // GET /Operaciones/Incidencias?q=texto
@@ -64,8 +65,22 @@ public class OperacionesController(
         // B: invalidar la clave del listado ANTES de volver a consultarlo
         await cache.InvalidarAsync();
 
+        // C: después de persistir (e invalidar), publicar el evento desde el servidor
+        await piehost.PublicarIncidenciaActualizadaAsync(id, incidencia.Estado.ToString());
+
         TempData["Exito"] = $"Incidencia #{id} cerrada.";
         return RedirectToAction(nameof(Incidencias));
+    }
+
+    // GET /Operaciones/Incidencias/Abiertas -> estado vigente (ids abiertos) para resincronizar al reconectar
+    [HttpGet("Incidencias/Abiertas")]
+    public async Task<IActionResult> Abiertas()
+    {
+        var ids = await db.Incidencias.AsNoTracking()
+            .Where(i => i.Estado == EstadoIncidencia.Abierta)
+            .Select(i => i.Id)
+            .ToListAsync();
+        return Json(ids);
     }
 
     private Task<List<IncidenciaDto>> ConsultarAbiertasAsync() =>
