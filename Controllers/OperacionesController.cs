@@ -1,5 +1,6 @@
 using BicisApp.Data;
 using BicisApp.Models;
+using BicisApp.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,14 +9,18 @@ namespace BicisApp.Controllers;
 
 [Authorize]
 [Route("Operaciones")]
-public class OperacionesController(ApplicationDbContext db, ILogger<OperacionesController> logger) : Controller
+public class OperacionesController(
+    ApplicationDbContext db,
+    CacheIncidencias cache,
+    ILogger<OperacionesController> logger) : Controller
 {
     // GET /Operaciones/Incidencias
     [HttpGet("Incidencias")]
     public async Task<IActionResult> Incidencias()
     {
-        var abiertas = await ConsultarAbiertasAsync();
-        return View(new IncidenciasViewModel { Incidencias = abiertas });
+        // B: listado general cacheado 60 s en Redis
+        var (abiertas, origen) = await cache.ObtenerAsync(ConsultarAbiertasAsync);
+        return View(new IncidenciasViewModel { Incidencias = abiertas, Origen = origen });
     }
 
     // POST /Operaciones/Incidencias/5/Cerrar  (solo Supervisor)
@@ -36,6 +41,9 @@ public class OperacionesController(ApplicationDbContext db, ILogger<OperacionesC
         incidencia.FechaCierre = DateTime.UtcNow;
         await db.SaveChangesAsync();
         logger.LogInformation("Incidencia {Id} cerrada en la base de datos", id);
+
+        // B: invalidar la clave del listado ANTES de volver a consultarlo
+        await cache.InvalidarAsync();
 
         TempData["Exito"] = $"Incidencia #{id} cerrada.";
         return RedirectToAction(nameof(Incidencias));

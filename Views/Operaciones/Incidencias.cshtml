@@ -5,11 +5,18 @@
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-<h1>Incidencias abiertas</h1>
+<h1>Incidencias abiertas con consulta rápida</h1>
 </div>
 
 @if (TempData["Exito"] is string exito) { <div class="alert alert-success">@exito</div> }
 @if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
+
+@if (Model.Origen is not null)
+{
+    <p class="small text-muted mb-2">Origen del listado:
+        <span class="badge @(Model.Origen == "Redis" ? "bg-info text-dark" : "bg-secondary")">@Model.Origen</span>
+    </p>
+}
 
 @if (!Model.Incidencias.Any())
 {

@@ -45,6 +45,7 @@ builder.Services.Configure<AlgoliaOptions>(builder.Configuration.GetSection("Alg
 builder.Services.AddHttpClient<IndexadorAlgolia>();
 
 // ---------- Servicios de las preguntas (A, B, C) ----------
+builder.Services.AddScoped<CacheIncidencias>();       // B: cache Redis 60 s
 
 builder.Services.AddControllersWithViews();
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
