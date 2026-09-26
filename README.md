@@ -53,3 +53,52 @@ El `Dockerfile` expande `$PORT` en el comando de inicio.
 ## Commit desplegado
 
 Render despliega automáticamente el último commit de `main` (ver Render → Deploys). El commit funcional final es el merge del PR #3 (`dcb6a65`).
+
+## Evidencias
+
+Capturas de las pruebas en Render, logs, PRs e historial (carpeta `evidencias/`).
+
+### Login
+
+![Login](evidencias/Login.png)
+
+### Redis
+
+![Redis](evidencias/Redis.png)
+
+### frenos, algolia
+
+![frenos, algolia](evidencias/frenos%2C%20algolia.png)
+
+### PieHost entre dos sesiones
+
+![PieHost entre dos sesiones](evidencias/PieHost%20entre%20dos%20sesiones.png)
+
+### Algolia no muestra nada
+
+![Algolia no muestra nada](evidencias/Algolia%20no%20muestra%20nada.png)
+
+### PASO 4 LOGS RENDER
+
+![PASO 4 LOGS RENDER](evidencias/PASO%204%20LOGS%20RENDER.png)
+
+### Hit de Redis
+
+![Hit de Redis](evidencias/Hit%20de%20Redis.png)
+
+### Historial de Git
+
+![Historial de Git](evidencias/Historial%20de%20Git.png)
+
+### Historial de Git.1
+
+![Historial de Git.1](evidencias/Historial%20de%20Git.1.png)
+
+### Lista de PRs
+
+![Lista de PRs](evidencias/Lista%20de%20PRs.png)
+
+### Commit desplegado
+
+![Commit desplegado](evidencias/Commit%20desplegado.png)
+
