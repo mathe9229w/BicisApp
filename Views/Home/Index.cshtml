@@ -1,0 +1,17 @@
+@{
+    ViewData["Title"] = "Inicio";
+}
+<div class="text-center my-4">
+    <h1 class="display-5">Averías de estaciones</h1>
+    <p class="lead">Registro y seguimiento de incidencias de bicicletas compartidas.</p>
+    <a class="btn btn-primary mt-2" asp-controller="Operaciones" asp-action="Incidencias">Ver incidencias</a>
+</div>
+<div class="card mt-4">
+    <div class="card-body">
+        <h5 class="card-title">Usuarios de prueba (contraseña <code>Examen2026!</code>)</h5>
+        <ul class="mb-0">
+            <li><code>supervisor@bicis.pe</code> – rol Supervisor (puede cerrar incidencias)</li>
+            <li><code>operador@bicis.pe</code> – solo consulta</li>
+        </ul>
+    </div>
+</div>
