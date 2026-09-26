@@ -12,17 +12,21 @@ namespace BicisApp.Controllers;
 public class OperacionesController(
     ApplicationDbContext db,
     BusquedaAlgolia algolia,
+    CacheIncidencias cache,
     ILogger<OperacionesController> logger) : Controller
 {
     // GET /Operaciones/Incidencias?q=texto
     [HttpGet("Incidencias")]
     public async Task<IActionResult> Incidencias(string? q)
     {
-        // Búsqueda vacía: listado habitual
+        // Búsqueda vacía: listado habitual, cacheado 60 s en Redis (B)
         if (string.IsNullOrWhiteSpace(q))
-            return View(new IncidenciasViewModel { Incidencias = await ConsultarAbiertasAsync() });
+        {
+            var (abiertas, origen) = await cache.ObtenerAsync(ConsultarAbiertasAsync);
+            return View(new IncidenciasViewModel { Incidencias = abiertas, Origen = origen });
+        }
 
-        // A: el servidor consulta Algolia y solo muestra incidencias ABIERTAS que existen en la base
+        // A: con texto se consulta Algolia directamente (sin la cache) y solo se muestran ABIERTAS de la base
         List<IncidenciaDto> resultado;
         try
         {
@@ -56,6 +60,9 @@ public class OperacionesController(
         incidencia.FechaCierre = DateTime.UtcNow;
         await db.SaveChangesAsync();
         logger.LogInformation("Incidencia {Id} cerrada en la base de datos", id);
+
+        // B: invalidar la clave del listado ANTES de volver a consultarlo
+        await cache.InvalidarAsync();
 
         TempData["Exito"] = $"Incidencia #{id} cerrada.";
         return RedirectToAction(nameof(Incidencias));
