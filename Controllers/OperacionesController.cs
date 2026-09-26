@@ -11,16 +11,35 @@ namespace BicisApp.Controllers;
 [Route("Operaciones")]
 public class OperacionesController(
     ApplicationDbContext db,
+    BusquedaAlgolia algolia,
     CacheIncidencias cache,
     ILogger<OperacionesController> logger) : Controller
 {
-    // GET /Operaciones/Incidencias
+    // GET /Operaciones/Incidencias?q=texto
     [HttpGet("Incidencias")]
-    public async Task<IActionResult> Incidencias()
+    public async Task<IActionResult> Incidencias(string? q)
     {
-        // B: listado general cacheado 60 s en Redis
-        var (abiertas, origen) = await cache.ObtenerAsync(ConsultarAbiertasAsync);
-        return View(new IncidenciasViewModel { Incidencias = abiertas, Origen = origen });
+        // Búsqueda vacía: listado habitual, cacheado 60 s en Redis (B)
+        if (string.IsNullOrWhiteSpace(q))
+        {
+            var (abiertas, origen) = await cache.ObtenerAsync(ConsultarAbiertasAsync);
+            return View(new IncidenciasViewModel { Incidencias = abiertas, Origen = origen });
+        }
+
+        // A: con texto se consulta Algolia directamente (sin la cache) y solo se muestran ABIERTAS de la base
+        List<IncidenciaDto> resultado;
+        try
+        {
+            var ids = await algolia.BuscarIdsAsync(q.Trim());
+            resultado = (await ConsultarAbiertasAsync()).Where(i => ids.Contains(i.Id)).ToList();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Fallo la búsqueda en Algolia");
+            TempData["Error"] = "No se pudo consultar Algolia.";
+            resultado = new List<IncidenciaDto>();
+        }
+        return View(new IncidenciasViewModel { Incidencias = resultado, Busqueda = q.Trim() });
     }
 
     // POST /Operaciones/Incidencias/5/Cerrar  (solo Supervisor)

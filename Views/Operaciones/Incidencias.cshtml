@@ -5,8 +5,23 @@
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-<h1>Incidencias abiertas con consulta rápida</h1>
+<h1>Incidencias abiertas encontradas con consulta rápida</h1>
 </div>
+
+<form method="get" asp-action="Incidencias" class="card card-body mb-3">
+    <div class="d-flex gap-2">
+        <input type="search" name="q" value="@Model.Busqueda" class="form-control" placeholder="Buscar por estación o descripción (Algolia)" />
+        <button type="submit" class="btn btn-primary">Buscar</button>
+        @if (!string.IsNullOrEmpty(Model.Busqueda))
+        {
+            <a asp-action="Incidencias" class="btn btn-outline-secondary">Limpiar</a>
+        }
+    </div>
+    @if (!string.IsNullOrEmpty(Model.Busqueda))
+    {
+        <small class="text-muted mt-2">Resultados de Algolia para "<strong>@Model.Busqueda</strong>" (solo incidencias abiertas en la base).</small>
+    }
+</form>
 
 @if (TempData["Exito"] is string exito) { <div class="alert alert-success">@exito</div> }
 @if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
