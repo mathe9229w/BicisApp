@@ -11,15 +11,36 @@ namespace BicisApp.Controllers;
 [Route("Operaciones")]
 public class OperacionesController(
     ApplicationDbContext db,
+    BusquedaAlgolia algolia,
+    CacheIncidencias cache,
     PublicadorPieHost piehost,
     ILogger<OperacionesController> logger) : Controller
 {
-    // GET /Operaciones/Incidencias
+    // GET /Operaciones/Incidencias?q=texto
     [HttpGet("Incidencias")]
-    public async Task<IActionResult> Incidencias()
+    public async Task<IActionResult> Incidencias(string? q)
     {
-        var abiertas = await ConsultarAbiertasAsync();
-        return View(new IncidenciasViewModel { Incidencias = abiertas });
+        // Búsqueda vacía: listado habitual, cacheado 60 s en Redis (B)
+        if (string.IsNullOrWhiteSpace(q))
+        {
+            var (abiertas, origen) = await cache.ObtenerAsync(ConsultarAbiertasAsync);
+            return View(new IncidenciasViewModel { Incidencias = abiertas, Origen = origen });
+        }
+
+        // A: con texto se consulta Algolia directamente (sin la cache) y solo se muestran ABIERTAS de la base
+        List<IncidenciaDto> resultado;
+        try
+        {
+            var ids = await algolia.BuscarIdsAsync(q.Trim());
+            resultado = (await ConsultarAbiertasAsync()).Where(i => ids.Contains(i.Id)).ToList();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Fallo la búsqueda en Algolia");
+            TempData["Error"] = "No se pudo consultar Algolia.";
+            resultado = new List<IncidenciaDto>();
+        }
+        return View(new IncidenciasViewModel { Incidencias = resultado, Busqueda = q.Trim() });
     }
 
     // POST /Operaciones/Incidencias/5/Cerrar  (solo Supervisor)
@@ -41,7 +62,10 @@ public class OperacionesController(
         await db.SaveChangesAsync();
         logger.LogInformation("Incidencia {Id} cerrada en la base de datos", id);
 
-        // C: después de persistir, publicar el evento desde el servidor
+        // B: invalidar la clave del listado ANTES de volver a consultarlo
+        await cache.InvalidarAsync();
+
+        // C: después de persistir (e invalidar), publicar el evento desde el servidor
         await piehost.PublicarIncidenciaActualizadaAsync(id, incidencia.Estado.ToString());
 
         TempData["Exito"] = $"Incidencia #{id} cerrada.";
