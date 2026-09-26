@@ -1,5 +1,6 @@
 using BicisApp.Data;
 using BicisApp.Models;
+using BicisApp.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,14 +9,33 @@ namespace BicisApp.Controllers;
 
 [Authorize]
 [Route("Operaciones")]
-public class OperacionesController(ApplicationDbContext db, ILogger<OperacionesController> logger) : Controller
+public class OperacionesController(
+    ApplicationDbContext db,
+    BusquedaAlgolia algolia,
+    ILogger<OperacionesController> logger) : Controller
 {
-    // GET /Operaciones/Incidencias
+    // GET /Operaciones/Incidencias?q=texto
     [HttpGet("Incidencias")]
-    public async Task<IActionResult> Incidencias()
+    public async Task<IActionResult> Incidencias(string? q)
     {
-        var abiertas = await ConsultarAbiertasAsync();
-        return View(new IncidenciasViewModel { Incidencias = abiertas });
+        // Búsqueda vacía: listado habitual
+        if (string.IsNullOrWhiteSpace(q))
+            return View(new IncidenciasViewModel { Incidencias = await ConsultarAbiertasAsync() });
+
+        // A: el servidor consulta Algolia y solo muestra incidencias ABIERTAS que existen en la base
+        List<IncidenciaDto> resultado;
+        try
+        {
+            var ids = await algolia.BuscarIdsAsync(q.Trim());
+            resultado = (await ConsultarAbiertasAsync()).Where(i => ids.Contains(i.Id)).ToList();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Fallo la búsqueda en Algolia");
+            TempData["Error"] = "No se pudo consultar Algolia.";
+            resultado = new List<IncidenciaDto>();
+        }
+        return View(new IncidenciasViewModel { Incidencias = resultado, Busqueda = q.Trim() });
     }
 
     // POST /Operaciones/Incidencias/5/Cerrar  (solo Supervisor)
